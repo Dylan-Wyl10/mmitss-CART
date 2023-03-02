@@ -100,6 +100,7 @@ def main():
     spatMapMsgCount = 0
 
     print("Waiting for packets received from the Traffic Signal Controller. Check:\n1. Physical connection between the Host and the Traffic Signal Controller.\n2. Server IP in MM-1-5-1 of the Signal Controller must match the IP address of the Host.\n3. Address in MM-1-5-3 must be set to 6053.\n4. Controller must be power-cycled after changes in internal configuration.\n")
+    print("you have successfully modified mmitss source code by CART Lab")
 
     spatBroadcastSuccessFlag = False
 

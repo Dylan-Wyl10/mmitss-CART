@@ -26,5 +26,16 @@ read -p "Name of container image on the Dockerhub : " container_image
 read -p "Name of container: " container_name
 read -p "Specify timezone string: " timezone
 
+#########################this should be activitated in dev mode
+read -p "Specify mrp-dev source code path: " host_path
 
-docker run --privileged -d --restart always -v $config_path:/nojournal -e TZ=$timezone --network host --name $container_name $container_image > /dev/null 2>&1 &
+
+###
+#this is the origianl scripts for mmitss
+###
+#docker run --privileged -d --restart always -v $config_path:/nojournal -e TZ=$timezone --network host --name $container_name $container_image > /dev/null 2>&1 &
+
+############################################################################################
+# if want to build a dev env in docker, use the following cmd.
+############################################################################################
+docker run --privileged -d --restart always -v $config_path:/nojournal -v $host_path:/mmitss/tmp -e TZ=$timezone --network host --name $container_name $container_image > /dev/null 2>&1 &
