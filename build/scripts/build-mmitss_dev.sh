@@ -580,7 +580,7 @@ else
 				echo "---------------------------------------"
 				echo "Building MRP-Field image for $PROCESSOR"
 				echo "---------------------------------------"
-				docker build -t mmitssuarizona/mmitss-mrp-$PROCESSOR:$versionTag -f build/dockerfiles/$PROCESSOR/Dockerfile.mrp .
+				docker build -t mmitssuarizona/mmitss-mrp-$PROCESSOR:$versionTag -f build/dockerfiles/$PROCESSOR/Dockerfile_dev.mrp .
 			fi	
 
 			if [ "$vspImage" = "y" ]; then
