@@ -56,8 +56,8 @@ VEHICLE_CALLS                   =   "1.3.6.1.4.1.1206.4.2.1.1.4.1.8.1"
 PEDESTRIAN_CALLS                =   "1.3.6.1.4.1.1206.4.2.1.1.4.1.9.1"
 
 # NTCIP Backup Time Parameter
-NTCIP_UNIT_BACKUP_TIME          =   "1.3.6.1.4.1.1206.4.2.1.3.3.1"
+NTCIP_UNIT_BACKUP_TIME          =   "1.3.6.1.4.1.1206.4.2.1.3.3.0" # 20230305 update: remove last digit .1///20230427 update: replace the last digit to .0
 
 # Special Function
-TOTAL_SPECIAL_FUNCTIONS         =   "1.3.6.1.4.1.1206.4.2.1.3.13.1"
+TOTAL_SPECIAL_FUNCTIONS         =   "1.3.6.1.4.1.1206.4.2.1.3.13.0" # 20230305 update: remove last digit .1///20230427 update: replace the last digit to .0
 SPECIAL_FUNCTION                =   "1.3.6.1.4.1.1206.4.2.1.3.14.1.3"
