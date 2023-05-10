@@ -15,7 +15,11 @@
 # The University of Arizona                                                                 
 #                                                                                           
 # This code was develop under the supervision of Professor Larry Head                       
-# in the Transportation Research Institute.                                                 
+# in the Transportation Research Institute.           
+#
+# 2023 April: This code is modified by Yilin Wang under the supervision of Professor Yiheng Feng
+# for the accommandations on MMITSS-Ann Arbor Deployment.
+#
 #                                                                                           
 # Operational Description:                                                                   
 # This script launches the docker container after getting inputs from the user                                                                                               

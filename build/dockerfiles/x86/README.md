@@ -10,3 +10,6 @@ Following Dockerfiles are available:
 2. `Dockerfile.mrp-server` is used to create the container image for running MMITSS applications in server-based deployment model.
 3. `Dockerfile.mrp-simulation` is used to create the container image for running MMITSS applications in the simulation environment.
 4. `Dockerfile.simulation-tools` builds the image that contains the applications required for facilitating the MMITSS simulation, i.e., MessageDistributor, SimulatedBsmBlobProcessor, and PriorityRequestGeneratorServer.
+
+
+# 2023 update: add time zone module scripts in the dockerfile.base to cooperate the change of time issues.

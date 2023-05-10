@@ -157,6 +157,7 @@ def main():
             # So, do the conversion before sending the SPaT data to broadcast.
 
             modifiedSpatJsonString = j2735Helper.get_standard_string_for_broadcast(spatJsonString, inactiveVehPhases, inactivePedPhases)
+            print(modifiedSpatJsonString)
             s.sendto(modifiedSpatJsonString.encode(), msgEncoderAddress)
             s.sendto(modifiedSpatJsonString.encode(), localDataCollectorAddress)
 

@@ -14,6 +14,12 @@ MAINTAINER D Cunningham (donaldcunningham@email.arizona.edu)
 RUN apt-get update && apt-get install -y apt-utils supervisor iputils-ping net-tools tzdata
 RUN mkdir -p /var/log/supervisor
 
+# set timezone 
+RUN apt-get update && \
+    apt-get install -yq tzdata && \
+    ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
+
 COPY lib/x86/system/libssl.so.1.1 /usr/lib/x86_64-linux-gnu/
 COPY lib/x86/system/libcrypto.so.1.1 /usr/lib/x86_64-linux-gnu/
 
