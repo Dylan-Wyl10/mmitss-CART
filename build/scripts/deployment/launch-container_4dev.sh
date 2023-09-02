@@ -27,7 +27,7 @@ read -p "Name of container: " container_name
 read -p "Specify timezone string: " timezone
 
 #########################this should be activitated in dev mode
-read -p "Specify mrp-dev source code path: " host_path
+read -p "Specify mrp-dev source code path: " -e host_path
 
 
 ###
@@ -38,4 +38,4 @@ read -p "Specify mrp-dev source code path: " host_path
 ############################################################################################
 # if want to build a dev env in docker, use the following cmd.
 ############################################################################################
-docker run --privileged -d --restart always -v $config_path:/nojournal -v $host_path:/mmitss/tmp -e TZ=$timezone --network host --name $container_name $container_image /bin/bash
+docker run --privileged -d --restart no -v $config_path:/nojournal -v $host_path:/mmitss/tmp -e TZ=$timezone --network host --name $container_name $container_image /bin/bash
