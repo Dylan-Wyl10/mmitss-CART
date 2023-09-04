@@ -36,6 +36,19 @@ int main()
     const int solverPortNo = static_cast<short unsigned int>(jsonObject["PortNumber"]["PrioritySolver"].asInt());
     const int messageDistributorPortNo = static_cast<short unsigned int>(jsonObject["PortNumber"]["MessageDistributor"].asInt());
     const int dataCollectorPortNo = static_cast<short unsigned int>(jsonObject["PortNumber"]["DataCollector"].asInt());
+    const bool onSchedule = static_cast<short unsigned int>(jsonObject["BusScheduleParameter"]["OnScheduleFlag"].asBool());
+
+    // print(onScheduleFlag);
+    // if (onScheduleFlag == 1)
+    // {
+    //     bool onSchedule{true};
+    // }
+    // else
+    // {
+    //     bool onSchedule{false};
+    // }
+
+
 
     const string LOCALHOST = jsonObject["HostIp"].asString();
     const string messageDistributorIP = jsonObject["MessageDistributorIP"].asString();
@@ -58,7 +71,7 @@ int main()
             if (msgType == MsgEnum::DSRCmsgID_srm)
             {
                 signalRequest.json2SignalRequest(receivedJsonString);
-                PRS.manageSignalRequestTable(signalRequest);
+                PRS.manageSignalRequestTable(onSchedule, signalRequest);
             }
 
             else if (msgType == static_cast<int>(msgType::coordinationRequest))

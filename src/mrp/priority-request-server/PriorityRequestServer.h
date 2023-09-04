@@ -106,7 +106,7 @@ public:
     string createSSMJsonString(SignalStatus signalStatus);
     string createJsonStringForPrioritySolver();
     string createJsonStringForSystemPerformanceDataLog();
-    void manageSignalRequestTable(SignalRequest signalRequest);
+    void manageSignalRequestTable(bool onSchedule, SignalRequest signalRequest);
     void manageCoordinationRequest(string jsonString);
     void deleteTimedOutRequestfromActiveRequestTable();
     void updateETAInActiveRequestTable();
@@ -129,7 +129,7 @@ public:
     int getPRSSequenceNumber();
     int getPRSUpdateCount();
     int getSplitPhase(int signalGroup);
-    bool acceptSignalRequest(SignalRequest signalRequest);
+    bool acceptSignalRequest(bool onSchedule, SignalRequest signalRequest);
     bool addToActiveRequestTable(SignalRequest signalRequest);
     bool updateActiveRequestTable(SignalRequest signalRequest);
     bool deleteRequestfromActiveRequestTable(SignalRequest signalRequest);

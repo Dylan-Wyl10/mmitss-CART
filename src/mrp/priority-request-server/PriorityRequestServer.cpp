@@ -79,18 +79,21 @@ int PriorityRequestServer::getMessageType(string jsonString)
 /*
 	If Intersection ID and Regional ID match then accept the srm
 */
-bool PriorityRequestServer::acceptSignalRequest(SignalRequest signalRequest)
+bool PriorityRequestServer::acceptSignalRequest(bool onSchedule, SignalRequest signalRequest)
 {
 	bool matchIntersection{false};
+	// bool onSchedule{false};
+	// vID = signalRequest.getTemporaryVehicleID();
 	msgReceived++;
 
-	if (intersectionID == signalRequest.getIntersectionID() && regionalID == signalRequest.getRegionalID())
-		matchIntersection = true;
-
+	if ((intersectionID == signalRequest.getIntersectionID() && regionalID == signalRequest.getRegionalID()) && onSchedule)
+		{
+			matchIntersection = true;
+		}
 	else
 	{
-		displayConsoleData("Discard the SRM since intersectionId doesn't match");
-		loggingData("Discard the SRM since intersectionId doesn't match");
+		displayConsoleData("Discard the SRM since intersectionId or Schedule doesn't match");
+		loggingData("Discard the SRM since intersectionId or Schedule doesn't match");
 		matchIntersection = false;
 		msgRejected++;
 	}
@@ -354,17 +357,18 @@ void PriorityRequestServer::calculateETA(int ETA_Minute, int ETA_Second)
 			- Then append the request regarding the split phase
 	- ETA of the other (already added) priority requests in the ART will be updated.
 */
-void PriorityRequestServer::manageSignalRequestTable(SignalRequest signalRequest)
+void PriorityRequestServer::manageSignalRequestTable(bool onSchedule, SignalRequest signalRequest)
 {
 	int vehicleID{};
 	double currentTime = getPosixTimestamp();
 	ActiveRequest activeRequest;
 	activeRequest.reset();
+	// bool onSchedule{false};
 
 	displayConsoleData("Received Priority Request from MsgDecoder");
 	loggingData("Received Priority Request from MsgDecoder");
 
-	if (acceptSignalRequest(signalRequest))
+	if (acceptSignalRequest(onSchedule, signalRequest))
 	{
 		setMinuteOfYear();
 		setMsOfMinute();
