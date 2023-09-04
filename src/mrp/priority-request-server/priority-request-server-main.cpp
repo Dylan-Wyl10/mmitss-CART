@@ -36,9 +36,10 @@ int main()
     const int solverPortNo = static_cast<short unsigned int>(jsonObject["PortNumber"]["PrioritySolver"].asInt());
     const int messageDistributorPortNo = static_cast<short unsigned int>(jsonObject["PortNumber"]["MessageDistributor"].asInt());
     const int dataCollectorPortNo = static_cast<short unsigned int>(jsonObject["PortNumber"]["DataCollector"].asInt());
-    const bool onSchedule = static_cast<short unsigned int>(jsonObject["BusScheduleParameter"]["OnScheduleFlag"].asBool());
+    const bool onSchedule = static_cast<short unsigned int>(jsonObject["BusScheduleParameter"]["OnScheduleFlag"].asBool());  // 20230901 YW update: add conditional prority flag
 
-    // print(onScheduleFlag);
+    ////////////////////////////////////////////////////////////////////////
+    // 20230901 YW: in the futural development, another function need to be added to process the configurations and generate onSchedule flag.
     // if (onScheduleFlag == 1)
     // {
     //     bool onSchedule{true};
@@ -47,6 +48,7 @@ int main()
     // {
     //     bool onSchedule{false};
     // }
+    ////////////////////////////////////////////////////////////////////
 
 
 
@@ -71,7 +73,7 @@ int main()
             if (msgType == MsgEnum::DSRCmsgID_srm)
             {
                 signalRequest.json2SignalRequest(receivedJsonString);
-                PRS.manageSignalRequestTable(onSchedule, signalRequest);
+                PRS.manageSignalRequestTable(onSchedule, signalRequest);  // 20230901 YW update: add one parameter, same change on .h file
             }
 
             else if (msgType == static_cast<int>(msgType::coordinationRequest))
