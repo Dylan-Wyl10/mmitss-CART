@@ -27,7 +27,7 @@ read -p "Name of container: " container_name
 read -p "Specify timezone string: " timezone
 
 #########################this should be activitated in dev mode
-read -p "Specify mrp-dev source code path: " -e host_path
+read -p "Specify dev source code path: " -e host_path
 
 
 ###

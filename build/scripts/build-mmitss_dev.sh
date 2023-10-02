@@ -587,7 +587,7 @@ else
 				echo "---------------------------------"
 				echo "Building VSP image for $PROCESSOR"
 				echo "---------------------------------"
-				docker build -t mmitssuarizona/mmitss-vsp-$PROCESSOR:$versionTag -f build/dockerfiles/$PROCESSOR/Dockerfile.vsp .
+				docker build -t mmitssuarizona/mmitss-vsp-$PROCESSOR:$versionTag -f build/dockerfiles/$PROCESSOR/Dockerfile_dev.vsp .
 			fi	
 
 			if [ "$serverImage" = "y" ]; then
