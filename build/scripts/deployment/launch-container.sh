@@ -37,7 +37,9 @@ read -p "Specify timezone string: " timezone
 ###
 #this is the origianl scripts for mmitss
 ###
-docker run --privileged -d --restart always -v $config_path:/nojournal -e TZ=$timezone --network host --name $container_name $container_image > /dev/null 2>&1 &
+# docker run --privileged -d --restart always -v $config_path:/nojournal -e TZ=$timezone --network host --name $container_name $container_image > /dev/null 2>&1 &
+
+docker run --privileged -d --restart always -v $config_path:/nojournal -e TZ=$timezone --network host --name $container_name $container_image 
 
 ############################################################################################
 # if want to build a dev env in docker, use the following cmd.
