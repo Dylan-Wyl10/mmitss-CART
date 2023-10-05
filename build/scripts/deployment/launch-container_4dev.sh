@@ -38,4 +38,5 @@ read -p "Specify dev source code path: " -e host_path
 ############################################################################################
 # if want to build a dev env in docker, use the following cmd.
 ############################################################################################
-docker run --privileged -d --restart no -v $config_path:/nojournal -v $host_path:/mmitss/tmp -e TZ=$timezone --network host --name $container_name $container_image /bin/bash
+# echo "docker run --privileged -d --restart no -v $config_path:/nojournal -v $host_path:/mmitss/tmp -e TZ=$timezone --network host --name $container_name $container_image /bin/bash"
+docker run --privileged -it --restart no -v $config_path:/nojournal -v $host_path:/mmitss/tmp -e TZ=$timezone --network host --name $container_name $container_image /bin/bash

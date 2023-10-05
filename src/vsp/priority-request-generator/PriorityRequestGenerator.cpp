@@ -178,6 +178,7 @@ bool PriorityRequestGenerator::addToActiveRequestTable(SignalStatus signalStatus
 bool PriorityRequestGenerator::checkPriorityRequestSendingRequirementStatus()
 {
 	bool srmSendingRequirement{};
+	// displayConsoleData("we are in checking priority request status");
 
 	switch (vehicleType)
 	{
@@ -314,9 +315,13 @@ bool PriorityRequestGenerator::checkRequestSendingRequirement(vector<BusStopInfo
 {
 	bool requestSendingRequirement{false};
 	double currentTime = getPosixTimestamp();
+	displayConsoleData("line 318");
 
 	if (!bus_Stop_List.empty())
+	{
 		busStopList = bus_Stop_List;
+		displayConsoleData("line 322");
+	}
 
 	checkPassedNearestBusStop();
 
@@ -324,9 +329,25 @@ bool PriorityRequestGenerator::checkRequestSendingRequirement(vector<BusStopInfo
 																		[&](ActiveRequest const &p)
 																		{ return p.vehicleID == temporaryVehicleID; });
 
+	//print everything
+	// std::cout << "findvehicleIDOnTable " << findVehicleIDOnTable << std::endl;
+	// std::cout << "active request table " << ActiveRequestTable << std::endl;
+	if(findVehicleIDOnTable != std::end(ActiveRequestTable)) 
+	{
+    std::cout << "Found vehicle with ID: " << findVehicleIDOnTable->vehicleID << std::endl;
+    // print any other members of ActiveRequest...
+	}
+	else 
+	{
+    std::cout << "Vehicle with ID " << temporaryVehicleID << " not found." << std::endl;
+	}
+
+
+
 	//If vehicle is out of the map but priority request is available in the ART, it is required to send a cancellation request.
 	if (!activeMapStatus && (findVehicleIDOnTable != ActiveRequestTable.end()))
 	{
+		displayConsoleData("if 1");
 		requestSendingRequirement = true;
 		requestSendStatus = false;
 		setPriorityRequestType(static_cast<int>(MsgEnum::requestType::priorityCancellation));
@@ -339,6 +360,7 @@ bool PriorityRequestGenerator::checkRequestSendingRequirement(vector<BusStopInfo
 								  static_cast<int>(MsgEnum::mapLocType::atIntersectionBox) ||
 								  static_cast<int>(MsgEnum::mapLocType::onOutbound))))
 	{
+		displayConsoleData("if 2");
 		requestSendingRequirement = true;
 		requestSendStatus = false;
 		setPriorityRequestType(static_cast<int>(MsgEnum::requestType::priorityCancellation));
@@ -351,6 +373,7 @@ bool PriorityRequestGenerator::checkRequestSendingRequirement(vector<BusStopInfo
 											static_cast<int>(MsgEnum::mapLocType::atIntersectionBox) ||
 											static_cast<int>(MsgEnum::mapLocType::onOutbound))))
 	{
+		displayConsoleData("if 3");
 		requestSendingRequirement = true;
 		requestSendStatus = false;
 		setPriorityRequestType(static_cast<int>(MsgEnum::requestType::priorityCancellation));
@@ -361,6 +384,7 @@ bool PriorityRequestGenerator::checkRequestSendingRequirement(vector<BusStopInfo
 			 (vehicleIntersectionStatus == static_cast<int>(MsgEnum::mapLocType::onInbound)) &&
 			 ((currentTime - srmSendingTime) >= SRM_TIME_GAP_VALUE))
 	{
+		displayConsoleData("if 4");
 		//If vehicleID is not in the ART, vehicle should send SRM
 		if (findVehicleIDOnTable == ActiveRequestTable.end())
 		{
@@ -418,6 +442,7 @@ bool PriorityRequestGenerator::checkRequestSendingRequirement(vector<BusStopInfo
 	//If vehicle doesn't pass the bus stop but the priority request is available in the ART, it is required to send a cancellation request.
 	else if (!busStopPassedStatus && (findVehicleIDOnTable != ActiveRequestTable.end()))
 	{
+		displayConsoleData("if 5");
 		requestSendingRequirement = true;
 		requestSendStatus = false;
 		setPriorityRequestType(static_cast<int>(MsgEnum::requestType::priorityCancellation));

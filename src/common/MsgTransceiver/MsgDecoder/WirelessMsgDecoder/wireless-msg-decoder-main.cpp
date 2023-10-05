@@ -41,6 +41,8 @@ int main()
     while (true)
     {
         receivedPayload = decoderSocket.receivePayloadHexString();
+        // receivedPayload = "0014354a44a9eaa8055f26e0dc2c1bba8e748b9c9414100070000000fdfa1fa1007fff80000000000038c00100013ffff006027efffec800";
+        std::cout << "Received payload is: " << receivedPayload << std::endl;
         size_t pos = receivedPayload.find("001");
         currentTime = static_cast<double>(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
@@ -54,6 +56,7 @@ int main()
                 if ((applicationPlatform == "vehicle") || ((applicationPlatform == "roadside") && (peerDataDecoding == true)))
                 {
                     string mapJsonString = decoder.createJsonStingOfMapPayload(extractedPayload);
+                    std::cout << "Received mapJsonString is: " << mapJsonString << std::endl;
                     decoderSocket.sendData(LOCALHOST, static_cast<short unsigned int>(mapReceiverPortNo), mapJsonString);
                     cout << "[" << fixed << showpoint << setprecision(2) << currentTime << "] Decoded MAP" << endl;
                 }
@@ -62,6 +65,7 @@ int main()
             else if (msgType == MsgEnum::DSRCmsgID_bsm)
             {
                 string bsmJsonString = decoder.bsmDecoder(extractedPayload);
+                std::cout << "Received BSMJSON String: " << bsmJsonString << std::endl;
                 decoderSocket.sendData(HMIControllerIP, static_cast<short unsigned int>(vehicleHmiPortNo), bsmJsonString);
                 decoderSocket.sendData(messageDistributorIP, static_cast<short unsigned int>(messageDistributorPort), bsmJsonString);
                 if(applicationPlatform=="roadside")
@@ -91,6 +95,7 @@ int main()
                 if ((applicationPlatform == "vehicle") || ((applicationPlatform == "roadside") && (peerDataDecoding == true)))
                 {
                     string spatJsonString = decoder.spatDecoder(extractedPayload);
+                    std::cout << "Received spatJsonString is: " << spatJsonString << std::endl;
                     decoderSocket.sendData(HMIControllerIP, static_cast<short unsigned int>(vehicleHmiPortNo), spatJsonString);
                     decoderSocket.sendData(LOCALHOST, static_cast<short unsigned int>(dataCollectorPortNo), spatJsonString);
                     cout << "[" << fixed << showpoint << setprecision(2) << currentTime << "] Decoded SPAT" << endl;

@@ -54,6 +54,7 @@ int main()
         priorityRequestGeneratorSocket.receiveData(receiveBuffer, sizeof(receiveBuffer));
         string receivedJsonString(receiveBuffer);
         msgType = PRG.getMessageType(receivedJsonString);
+        // std::cout << "Received JSON String: " << receivedJsonString << std::endl;
 
         if (msgType == static_cast<int>(msgType::lightSirenStatus))
             PRG.setLightSirenStatus(receivedJsonString);
@@ -62,11 +63,13 @@ int main()
         {
             basicVehicle.json2BasicVehicle(receivedJsonString);
             PRG.getVehicleInformationFromMAP(mapManager, basicVehicle);
+            // std::cout << "prority request sending requirement status:" << PRG.checkPriorityRequestSendingRequirementStatus() << std::endl;
             
             // Formulate srm JSON string, if requires and send it over the socket.
             if (PRG.checkPriorityRequestSendingRequirementStatus())
             {
                 srmJsonString = PRG.createSRMJsonString(basicVehicle, signalRequest, mapManager);
+                std::cout << "SRM String is: " << srmJsonString << std::endl;
                 priorityRequestGeneratorSocket.sendData(HostIP, static_cast<short unsigned int>(srmReceiverPortNo), srmJsonString);
                 priorityRequestGeneratorSocket.sendData(HostIP, static_cast<short unsigned int>(dataCollectorPort), srmJsonString);
             }
