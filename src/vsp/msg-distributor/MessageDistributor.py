@@ -48,15 +48,21 @@ class MessageDistributor:
         self.udp_bsm = UDP(self.address_bsm)
 
 
-    def DistributeBsm(self):
+    def DistributeMsg(self):
         payload = self.udp_re.receive()  # receive payload from radio device
         type = None  # initial msg type
         if payload is not None:
             print("payload is: ", payload)
-            payload_str = str(payload)
+            payload_str = str(payload).lower()
             if "0014" in payload_str:
                 type = 'BSM'
-            elif ""
+            elif "001d8" in payload_str:
+                type = "SRM"
+            elif "00128" in payload_str:
+                type = "MAP"
+
+    def SendMsg(self, type):
+        
 
 
 
