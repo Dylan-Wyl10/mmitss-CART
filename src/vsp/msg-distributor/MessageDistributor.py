@@ -56,13 +56,13 @@ class MessageDistributor:
             payload_str = str(payload).lower()
             if "0014" in payload_str:
                 type = 'BSM'
-                self.udp_bsm.send(bytes(bsm_tmp, 'utf-8'))
+                self.udp_bsm.send(bytes(payload_str, 'utf-8'))
             elif "00138" in payload_str:
                 type = "SPaT"
-                self.udp_prg.send(bytes(bsm_tmp, 'utf-8'))
+                self.udp_prg.send(bytes(payload_str, 'utf-8'))
             elif "00128" in payload_str:
                 type = "MAP"
-                self.udp_prg.send(bytes(bsm_tmp, 'utf-8'))
+                self.udp_prg.send(bytes(payload_str, 'utf-8'))
 
     # def SendMsg(self, type):
 
@@ -79,7 +79,7 @@ def main():
     mrpIp = config["HostIp"]
     ReceivePort = config["PortNumber"]["MessageDistributor"]
     HostBsmDecoder= config["PortNumber"]["HostBsmDecoder"]
-    Msg
+    MsgDistributor = config["PortNumber"][""]
 
 
         
