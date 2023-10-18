@@ -1,7 +1,7 @@
 {
-	"HostIp": "10.12.7.3",
+	"HostIp": "192.168.0.100",
 	"PortNumber": {
-		"HMIController": 20009
+		"HMIController": 20109
 	}
 }
 	

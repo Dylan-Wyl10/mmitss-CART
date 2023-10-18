@@ -41,6 +41,8 @@ int main()
             extractedPayload = receivedPayload.erase(0, pos);
             bsmJsonString = decoder.bsmDecoder(extractedPayload);
             cout << "[" << fixed << showpoint << setprecision(2) << currentTime << "] Decoded HostBSM" << endl;
+            std::cout << "Received BSM JSON String: " << bsmJsonString << std::endl;
+
             decoderSocket.sendData(LOCALHOST, static_cast<short unsigned int>(bsmReceiverPortNo), bsmJsonString);
             decoderSocket.sendData(LOCALHOST, static_cast<short unsigned int>(dataCollectorPortNo), bsmJsonString);
         }

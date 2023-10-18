@@ -40,7 +40,7 @@ controllerPort = config["PortNumber"]["HMIController"]
 controller = (controllerIP, controllerPort)
 
 hmiIP = '127.0.0.1' #hmi runs on the same computer/laptop
-hmiPort = 20010
+hmiPort = 20110
 hmi = (hmiIP, hmiPort)
 
 # Create an object of UtcHelper class (this converts timeMark (SAE J2735 object) to deciseconds for display

@@ -653,7 +653,7 @@ if __name__ == "__main__":
 
     # set up communications
     hmiIP = '127.0.0.1'
-    hmiPort = 20010
+    hmiPort = 20110
     hmi = (hmiIP, hmiPort)
 
     # Create a socket
