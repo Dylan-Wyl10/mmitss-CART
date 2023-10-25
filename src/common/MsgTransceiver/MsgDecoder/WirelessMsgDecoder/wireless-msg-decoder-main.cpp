@@ -41,7 +41,6 @@ int main()
     while (true)
     {
         receivedPayload = decoderSocket.receivePayloadHexString();
-        // receivedPayload = "0014354a44a9eaa8055f26e0dc2c1bba8e748b9c9414100070000000fdfa1fa1007fff80000000000038c00100013ffff006027efffec800";
         std::cout << "Received payload is: " << receivedPayload << std::endl;
         size_t pos = receivedPayload.find("001");
         currentTime = static_cast<double>(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
@@ -55,6 +54,8 @@ int main()
             {
                 if ((applicationPlatform == "vehicle") || ((applicationPlatform == "roadside") && (peerDataDecoding == true)))
                 {
+                    // std::cout << "application platform: " << applicationPlatform << std::endl;
+                    // std::cout << "peerDataDecoding" << peerDataDecoding << std::endl;
                     string mapJsonString = decoder.createJsonStingOfMapPayload(extractedPayload);
                     std::cout << "Received mapJsonString is: " << mapJsonString << std::endl;
                     decoderSocket.sendData(LOCALHOST, static_cast<short unsigned int>(mapReceiverPortNo), mapJsonString);

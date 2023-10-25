@@ -85,6 +85,11 @@ bool PriorityRequestServer::acceptSignalRequest(bool onSchedule, SignalRequest s
 	// bool onSchedule{false};
 	// vID = signalRequest.getTemporaryVehicleID();
 	msgReceived++;
+	std::cout << "intersectionID: " << intersectionID << std::endl;
+	std::cout << "SRMinterID: " << signalRequest.getIntersectionID() << std::endl;
+	std::cout << "regionID: " << regionalID << std::endl;
+	std::cout << "SRMregionID: " << signalRequest.getRegionalID() << std::endl;
+
 
 	if ((intersectionID == signalRequest.getIntersectionID() && regionalID == signalRequest.getRegionalID()) && onSchedule)
 		{
