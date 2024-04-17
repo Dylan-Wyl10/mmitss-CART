@@ -26,7 +26,7 @@ class RsuMsgPacket
         std::string txInterval = "0";
         std::string deliveryStart = "";
         std::string deliveryStop = "";
-        std::string signature = "False";
+        std::string signature{};
         std::string encryption = "False";
         std::string payload{};
 

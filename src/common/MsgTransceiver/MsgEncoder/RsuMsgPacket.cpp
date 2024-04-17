@@ -59,6 +59,8 @@ RsuMsgPacket::RsuMsgPacket()
     mapTxMode = jsonObject_config["TxMode"]["map"].asString();
     ssmTxMode = jsonObject_config["TxMode"]["ssm"].asString();
 
+    signature = jsonObject_config["Signature"].asString();
+
 
 }
 
