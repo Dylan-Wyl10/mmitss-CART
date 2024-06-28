@@ -43,6 +43,38 @@ int main()
         receivedPayload = decoderSocket.receivePayloadHexString();
         std::cout << "Received payload is: " << receivedPayload << std::endl;
         size_t pos = receivedPayload.find("001");
+
+        // 20240628 YW: update the logic for header issues for Danlaw device
+        size_t pos_bsm = receivedPayload.find("0014");
+        size_t pos_srm1 = receivedPayload.find("001d");
+        size_t pos_srm2 = receivedPaylaod.find("001D");
+        size_t pos_map = receivedPayload.find("0012");
+
+        if (pos_bsm != string::npos)
+        {
+            pos = pos_bsm;
+        }
+        else if (pos_srm1 != string::npos)
+        {
+            pos = pos_srm1;
+        }
+        else if (pos_srm2 != string::npos)
+        {
+            pos = pos_srm2;
+        }
+        else if (pos_map != string::npos)
+        {
+            pos = pos_map;
+        }
+        else
+        {
+            std::cout << "the message is not SRM/BSM/MAP" << std::endl;
+        }
+
+        // END of 20240628 edition 
+
+
+        
         currentTime = static_cast<double>(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
         if (pos != string::npos)
