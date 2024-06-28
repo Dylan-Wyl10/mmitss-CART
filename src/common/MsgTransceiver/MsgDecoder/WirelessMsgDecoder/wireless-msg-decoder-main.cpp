@@ -72,6 +72,8 @@ int main()
                 if(applicationPlatform=="roadside")
                 {
                     decoderSocket.sendData(LOCALHOST, static_cast<short unsigned int>(trajectoryAwarePortNo), bsmJsonString);
+                    decoderSocket.sendData(LOCALHOST, static_cast<short unsigned int>(dataCollectorPortNo), bsmJsonString);
+
                 }
                 else if(applicationPlatform=="vehicle")
                 {
