@@ -47,7 +47,7 @@ int main()
         // 20240628 YW: update the logic for header issues for Danlaw device
         size_t pos_bsm = receivedPayload.find("0014");
         size_t pos_srm1 = receivedPayload.find("001d");
-        size_t pos_srm2 = receivedPaylaod.find("001D");
+        size_t pos_srm2 = receivedPayload.find("001D");
         size_t pos_map = receivedPayload.find("0012");
 
         if (pos_bsm != string::npos)
