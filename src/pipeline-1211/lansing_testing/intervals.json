@@ -1,0 +1,36 @@
+{
+    "files": [
+        "lansing_testing/02.json",
+        "lansing_testing/03.json",
+        "lansing_testing/04.json",
+        "lansing_testing/05.json",
+        "lansing_testing/06.json",
+        "lansing_testing/07.json",
+        "lansing_testing/08.json",
+        "lansing_testing/09.json",
+        "lansing_testing/10.json",
+        "lansing_testing/11.json",
+        "lansing_testing/12.json",
+        "lansing_testing/13.json",
+        "lansing_testing/14.json",
+        "lansing_testing/15.json",
+        "lansing_testing/16.json"
+    ],
+    "intervals": [
+        2.0,
+        3.0,
+        6.0,
+        4.0,
+        6.0,
+        4.0,
+        5.0,
+        4.0,
+        2.0,
+        6.0,
+        3.0,
+        2.0,
+        5.0,
+        6.0,
+        4.0
+    ]
+}

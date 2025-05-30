@@ -1,0 +1,13 @@
+{
+    "name": "MMITSS Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    "mounts": [
+        "source=${env:HOME}/RA/MMITSS_dev/nojournal,target=/nojournal,type=bind"
+    ],
+    "runArgs": [
+    "--network=host"
+    ]
+}

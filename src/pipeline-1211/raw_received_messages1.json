@@ -1,0 +1,138 @@
+[
+    {
+        "Timestamp": "2025-05-14 13:22:39 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"ClearRequest\"}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:08 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":1,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":32.152952077865599,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":6,\"speed_MeterPerSecond\":10.0,\"vehicleID\":-414655782,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:10 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":1,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":25.452909877777099,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":12.0,\"vehicleID\":-414655782,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:13 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":21.780277898788452,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":12.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":2.9999220371246338,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:19 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":25.941946117401123,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":8.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:23 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":21.365211097717285,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":8.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":2.9999179840087891,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:29 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":19.350960899353026,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":7.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:33 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":14.768967081069945,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":7.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":2.9998970031738281,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:38 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":20.564898910522462,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":4.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:42 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":16.889172973632814,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":4.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.9999668598175049,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:44 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":5.9999198913574219,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:50 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.9999289512634277,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:53 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":6.9999699592590332,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:23:55 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":4.7341659069061279,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.1619089241027831,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":5.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:24:00 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":2,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":5.9999070167541504,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414655782,\"vehicleType\":6},{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":1,\"speed_MeterPerSecond\":5.0,\"vehicleID\":-414917926,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:24:06 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"PriorityRequest\",\"PriorityRequestList\":{\"intersectionID\":37822,\"noOfRequest\":1,\"regionalID\":0,\"requestorInfo\":[{\"ETA\":1.0,\"ETA_Duration\":4.0,\"basicVehicleRole\":16,\"requestedSignalGroup\":5,\"speed_MeterPerSecond\":0.0,\"vehicleID\":-414655782,\"vehicleType\":6}]}}"
+    },
+    {
+        "Timestamp": "2025-05-14 13:24:10 UTC",
+        "Source": [
+            "10.71.226.54",
+            20002
+        ],
+        "RawData": "{\"MsgType\":\"ClearRequest\"}"
+    }
+]
