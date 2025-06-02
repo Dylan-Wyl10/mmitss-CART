@@ -121,11 +121,18 @@ bool PriorityRequestServer::addToActiveRequestTable(SignalRequest signalRequest)
 	if (ActiveRequestTable.size() >= Maximum_Number_Of_Priority_Request)
 		addRequest = false;
 
-	else if (ActiveRequestTable.empty() && (signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::priorityRequest)))
+	// else if (ActiveRequestTable.empty() && (signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::priorityRequest)))
+	else if (ActiveRequestTable.empty() && 
+        (signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::priorityRequest) || 
+         signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::requestUpdate)))
 		addRequest = true;
 
-	else if (!ActiveRequestTable.empty() && (findVehicleIDOnTable == ActiveRequestTable.end()) &&
-			 (signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::priorityRequest)))
+	//else if (!ActiveRequestTable.empty() && (findVehicleIDOnTable == ActiveRequestTable.end()) &&
+	//		 (signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::priorityRequest)))
+	else if (!ActiveRequestTable.empty() && 
+         (findVehicleIDOnTable == ActiveRequestTable.end()) &&
+         (signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::priorityRequest) || 
+          signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::requestUpdate)))	
 		addRequest = true;
 
 	// else if (!ActiveRequestTable.empty() && (signalRequest.getPriorityRequestType() == static_cast<int>(MsgEnum::requestType::priorityRequest)))

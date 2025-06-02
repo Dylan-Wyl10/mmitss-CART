@@ -27,3 +27,4 @@ WORKDIR /mmitss
 
 # Copy the compiled executable into the image
 COPY src/pipeline-1211/bin/M_Solver1211 /mmitss/M_Solver1211
+COPY src/mrp/priority-request-server/M_PriorityRequestServer /mmitss/M_PriorityRequestServer
