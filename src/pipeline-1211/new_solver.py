@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
-# Version: v10-fix
+# Version: v12
 import json
 import time
 import subprocess
 from pathlib import Path
 import socket 
 import datetime
-
-msg_type_map = {
-    "PriorityRequest": "SnmpSetRequest"
-}
-
-oid_map = {
-    "PriorityRequest": "1.3.6.1.4.1.1206.4.2.11.2.1.1"
-}
+import threading
 
 ###############################################################################
 # Status Table: mapping integer statuses to descriptive strings               #
@@ -37,6 +30,12 @@ REQUEST_STATUS_CODES = {
     15: "closedFlash"
 }
 
+TERMINAL_STATUS_NAMES = (
+    "closedCompleted", "idleNotValid", "closedCanceled",
+    "closedTimeToLiveError", "closedTimerError",
+    "closedStrategyError", "closedFlash", "reserviceError"
+)
+
 class NewSolver:
     def __init__(self, host_ip, port, output_dir, snmp_target, snmp_community):
         self.host_ip = host_ip
@@ -45,16 +44,7 @@ class NewSolver:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.snmp_target = snmp_target
-        self.snmp_community = snmp_community
-
-        self.poll_interval = 0.5
-        self.active_requests = []
-        self.removal_queue = {}
-
-        # Set up UDP socket
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind((self.host_ip, self.port))
-        print(f"NewSolver listening on {self.host_ip}:{self.port}")
+        self.snmp_community = snmp_community        
         
         # Clear previous SNMP log at startup
         timestamp = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
@@ -66,13 +56,62 @@ class NewSolver:
         
         self.received_log_path = self.output_dir / f"received_requests_log_{timestamp}.json"
         self.received_log_path.write_text("[]") 
+
+        self.poll_interval = 0.5
+        self.used_ids = set()  # Persistent: only grows, unless cleared as described.
+        self.prev_req_ids = set()  # Set of (vehicleIDStr, classType, priorityRequestPhase)
+        self.active_requests = {}  # Always overwritten by scans/updates.
         
+        self.monitoring_console_logs = []
+        self.monitoring_log_lock = threading.Lock()
+        
+        # Set up UDP socket
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind((self.host_ip, self.port))
+        self.log(f"NewSolver listening on {self.host_ip}:{self.port}", level="INFO", tag="INIT")
+    
         self.log_signal_plan()
+        self.load_active_requests_from_controller()
         
     def run(self):
         """Continuously listens for new priority request files and processes them inside monitor_requests()."""
-        print("\n=== NewSolver is starting ===")
+        self.log("=== NewSolver is starting ===", tag="STARTUP")
+        self.flush_monitoring_log()
         self.monitor_requests()  
+
+    def log(self, msg, level="INFO", tag=None):
+        timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        prefix = f"[{level}]"
+        if tag:
+            prefix += f"[{tag}]"
+        out_msg = f"{timestamp} {prefix} {msg}"
+        print(out_msg)
+        self.add_to_monitoring_log(out_msg)
+        self.flush_monitoring_log()
+
+    def add_to_monitoring_log(self, msg):
+        if not hasattr(self, "_monitoring_log_buffer"):
+            self._monitoring_log_buffer = []
+        self._monitoring_log_buffer.append(msg)
+
+    def flush_monitoring_log(self):
+        with self.monitoring_log_lock:
+            if hasattr(self, "_monitoring_log_buffer") and self._monitoring_log_buffer:
+                # Read old logs
+                if self.monitoring_log_path.exists():
+                    with self.monitoring_log_path.open("r", encoding="utf-8") as f:
+                        try:
+                            monitor_log = json.load(f)
+                        except json.JSONDecodeError:
+                            monitor_log = []
+                else:
+                    monitor_log = []
+                # Append all new lines
+                monitor_log.extend(self._monitoring_log_buffer)
+                # Write back
+                with self.monitoring_log_path.open("w", encoding="utf-8") as f:
+                    json.dump(monitor_log, f, indent=4)
+                self._monitoring_log_buffer = []
 
 
     ###########################################################################
@@ -86,9 +125,57 @@ class NewSolver:
             response = result.stdout.strip()
             if "INTEGER:" in response:
                 return int(response.split("INTEGER:")[1].strip())
+            else:
+                self.log(f"SNMP GET for OID {oid} did not return an INTEGER. Response: {response}", level="WARNING", tag="SNMP")
         except subprocess.CalledProcessError as e:
-            print(f"[ERROR] SNMP GET failed for OID {oid}: {e.stderr}")
+            self.log(f"SNMP GET failed for OID {oid}: {e.stderr}", level="ERROR", tag="SNMP")
         return None
+    
+    def snmp_get(self, oid: str) -> str:
+        """Execute snmpget and return the stdout. Return None on error."""
+        command = [
+            "snmpget",
+            "-v1",
+            "-c", self.snmp_community,
+            self.snmp_target,
+            oid
+        ]
+
+        try:
+            result = subprocess.run(
+                command,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            return result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            self.log(f"SNMP GET failed for OID {oid}: {e.stderr}", level="ERROR", tag="SNMP")
+            return None
+
+    def extract_status_code(self, snmp_response: str):
+        """
+        Parse the net-snmp response to extract the integer after 'INTEGER:'.
+        Example:
+          SNMPv2-SMI::iso.3.6.1.xxxx = INTEGER: 4
+          => 4
+        Returns None if we can't parse an integer.
+        """
+        marker = "INTEGER:"
+        idx = snmp_response.find(marker)
+        if idx == -1:
+            return None
+
+        after = snmp_response[idx + len(marker):].strip()
+        parts = after.split()
+        if not parts:
+            return None
+
+        try:
+            return int(parts[0])
+        except ValueError:
+            return None
 
     def log_signal_plan(self):
         log_path = self.snmp_log_path
@@ -104,10 +191,10 @@ class NewSolver:
         plan_number = self.snmp_get_value(plan_oid)
 
         if plan_number is None:
-            print("[ERROR] Failed to get current event plan number.")
+            self.log("[ERROR] Failed to get current event plan number.", level="ERROR", tag="SignalPlan")
             return
 
-        print(f"\n[INFO] Current Event Plan: {plan_number}")
+        self.log(f"Current Event Plan: {plan_number}", tag="SignalPlan")
         signal_plan = {"EventPlan": plan_number, "Phases": []}
 
         for phase in range(1, 17):
@@ -133,13 +220,108 @@ class NewSolver:
             }
             signal_plan["Phases"].append(phase_info)
 
-            print(f"Phase {phase:2d}: Green={green}, Yellow={phase_info['Yellow']}, Red={phase_info['Red']}, "
-                  f"MaxReduction={reduction}, MaxExtension={extension}")
+            msg = (f"Phase {phase:2d}: Green={green}, Yellow={phase_info['Yellow']}, "
+                f"Red={phase_info['Red']}, MaxReduction={reduction}, MaxExtension={extension}")
+            self.log(msg, tag="SignalPlan")
 
         log_data.insert(0, {"InitialSignalPlan": signal_plan})
         log_path.write_text(json.dumps(log_data, indent=4))
     
+    def hex_string_to_ascii(self, hex_str):
+        """Convert a hex string (as returned by SNMP for vehicle ID) to ASCII string."""
+        bytes_object = bytes.fromhex(hex_str)
+        return bytes_object.decode(errors="ignore").replace('\x00', '').strip()
     
+    def scan_controller_active_requests(self, verbose=False):
+        """
+        Scan controller table rows 1-10.
+        Return:
+            - active_requests: dict {request_id: {info}}
+            - active_ids: set of currently active request_ids (for diagnostic, not for used_ids logic)
+        If verbose=True, print each active request.
+        """
+        active_requests = {}
+        active_ids = set()
+
+        for row_id in range(1, 11):
+            status_oid = f"1.3.6.1.4.1.1206.4.2.11.1.1.1.9.{row_id}"
+            status_response = self.snmp_get(status_oid)
+            if not status_response:
+                self.log(f"Row {row_id}: SNMP status get failed or empty.", level="WARNING", tag="ControllerScan")
+                continue
+            status_code = self.extract_status_code(status_response)
+            status_name = REQUEST_STATUS_CODES.get(status_code, f"Unknown({status_code})")
+            if status_name in TERMINAL_STATUS_NAMES:
+                continue  # Not active
+
+            # Fetch details for this row
+            request_id_oid = f"1.3.6.1.4.1.1206.4.2.11.1.1.1.2.{row_id}"
+            vehicle_id_oid = f"1.3.6.1.4.1.1206.4.2.11.1.1.1.3.{row_id}"
+            class_type_oid = f"1.3.6.1.4.1.1206.4.2.11.1.1.1.4.{row_id}"
+            class_level_oid = f"1.3.6.1.4.1.1206.4.2.11.1.1.1.5.{row_id}"
+            eta_oid = f"1.3.6.1.4.1.1206.4.2.11.1.1.1.7.{row_id}"
+            etd_oid = f"1.3.6.1.4.1.1206.4.2.11.1.1.1.8.{row_id}"
+
+            request_id_val = self.snmp_get_value(request_id_oid)
+            vehicle_id_hex = self.snmp_get(vehicle_id_oid)
+            class_type_val = self.snmp_get_value(class_type_oid)
+            class_level_val = self.snmp_get_value(class_level_oid)
+            eta_val = self.snmp_get_value(eta_oid)
+            etd_val = self.snmp_get_value(etd_oid)
+
+            # Convert vehicle ID hex to string
+            if vehicle_id_hex and "Hex-STRING:" in vehicle_id_hex:
+                hex_str = vehicle_id_hex.split("Hex-STRING:")[1].strip().replace(" ", "")
+                vehicle_id_str = self.hex_string_to_ascii(hex_str)
+                if vehicle_id_str.startswith('.'):
+                    vehicle_id_str = '-' + vehicle_id_str[1:]
+            else:
+                vehicle_id_str = "unknown"
+
+            req_hex = f"{request_id_val:02x}" if request_id_val is not None else "unknown"
+            class_type_hex = f"{class_type_val:02x}" if class_type_val is not None else "unknown"
+            class_level_hex = f"{class_level_val:02x}" if class_level_val is not None else "unknown"
+
+            msg = (f"[LOADED] Row={row_id}, RequestID={req_hex}, VehicleID={vehicle_id_str}, "
+                f"VehicleClassType={class_type_hex}, VehicleClassLevel={class_level_hex}, "
+                f"Status={status_name}, ETA={eta_val}, ETD={etd_val}")
+            if verbose:
+                self.log(msg, tag="ControllerScan")
+            
+            if request_id_val is not None:
+                active_requests[request_id_val] = ({
+                    "requestIDHex": req_hex,
+                    "requestIDDec": request_id_val,
+                    "vehicleIDStr": vehicle_id_str,
+                    "setOID": None,
+                    "setValue": None,
+                    "statusOID": status_oid,
+                    "status": status_name,
+                    "currentETA": eta_val,
+                    "currentETD": etd_val,
+                    "classType": class_type_hex,
+                    "classLevel": class_level_hex,
+                    "priorityRequestPhase": "unknown"  # No phase info
+                })
+                active_ids.add(request_id_val)
+            else:
+                self.log(f"Row {row_id}: request_id_val is None, skipping.", level="WARNING", tag="ControllerScan")
+        return active_requests, active_ids
+    
+    def load_active_requests_from_controller(self):
+        """
+        Populate self.active_requests and update self.used_ids as needed.
+        Print all loaded requests.
+        """
+        self.log("Loading existing active requests from controller...", tag="INIT")
+        loaded_requests, _ = self.scan_controller_active_requests(verbose=True)
+        self.active_requests = loaded_requests
+        # Add all loaded request IDs into self.used_ids (do not remove any IDs)
+        for req_id in loaded_requests:
+            self.used_ids.add(req_id)
+        self.log(f"{len(self.active_requests)} active requests loaded from controller.", tag="INIT")
+
+
     def vehicle_id_to_hex(self, vehicle_id_str: str) -> str:
         """
         Convert a vehicle ID string into a 34-digit hex:
@@ -149,14 +331,18 @@ class NewSolver:
         return hex_representation.ljust(34, '0')[:34]
     
     def find_next_available_id(self):
-        """Finds the first available priority request ID (1-255) that is not currently active."""
-        used_ids = {int(req["requestIDHex"], 16) for req in self.active_requests}
-        
-        for i in range(1, 256):  # Priority Request IDs range from 1 to 255
-            if i not in used_ids:
-                return f"{i:02x}"  # Return as hex string (e.g., "01", "02", ...)
-        
-        raise ValueError("No available Priority Request IDs!")
+        """
+        Find the smallest unused ID in 1-255.
+        If all are used, clear used_ids and start from scratch.
+        Returns hex string.
+        """
+        for i in range(1, 256):
+            if i not in self.used_ids:
+                return f"{i:02x}"
+        # All used, reset and start fresh
+        self.log("All possible IDs have been used. Clearing used_ids for recycling.", tag="REQUEST")
+        self.used_ids.clear()
+        return "01"
 
     def generate_snmp_requests(self, data: dict):
         """
@@ -165,8 +351,6 @@ class NewSolver:
         3) Populate self.active_requests with data for sets + gets (status)
         """
         msg_type = data.get("MsgType")
-        output_msg_type = msg_type_map.get(msg_type, "Unknown")
-        set_oid = oid_map.get(msg_type, "Unknown")
         new_oid = "1.3.6.1.4.1.1206.4.2.11.2.1.1" # OID for new requests
         update_oid = "1.3.6.1.4.1.1206.4.2.11.2.2.1"  # OID for update
         clear_oid = "1.3.6.1.4.1.1206.4.2.11.2.5.1"  # OID for clearing requests
@@ -174,65 +358,101 @@ class NewSolver:
 
         if msg_type == "ClearRequest":
             msg = "[INFO] Received ClearRequest: Clearing all active requests."
-            console_logs.append(msg)
-            print("\n",msg)
+            self.log(msg, tag="REQUEST")
 
-            for req in self.active_requests:
-                #if req["requestIDHex"] not in self.removal_queue:  # Only clear active requests
-                    req["setOID"] = clear_oid  
-                    req["status"] = "pending"  # Mark as pending for sending
-                    req["setValue"] = (
-                        req["requestIDHex"] + self.vehicle_id_to_hex(req["vehicleIDStr"]) +
-                        req["classType"] + req["classLevel"] + req["priorityRequestPhase"]
-                    )
+            for req in self.active_requests.values():
+                req["setOID"] = clear_oid  
+                req["status"] = "pending"  # Mark as pending for sending
+                req["setValue"] = (
+                    req["requestIDHex"] + self.vehicle_id_to_hex(req["vehicleIDStr"]) +
+                    req["classType"] + req["classLevel"] + req["priorityRequestPhase"]
+                )
 
-                    msg = f"[CLEAR] RequestID={req['requestIDHex']} for VehicleID={req['vehicleIDStr']} marked for clearing."
-                    console_logs.append(msg)
-                    print(msg)
-                    self.removal_queue[req["requestIDHex"]] = time.time() + 60
-
-            self.append_to_monitoring_log(console_logs)
+                msg = f"[CLEAR] RequestID={req['requestIDHex']} for VehicleID={req['vehicleIDStr']} marked for clearing."
+                self.log(msg, tag="REQUEST")
             return 
 
         priority_list = data.get("PriorityRequestList", {})
         requestor_info = priority_list.get("requestorInfo", [])
         
-        # Count existing (classType, priorityRequestPhase) in active requests (excluding removal queue)
+        # Count existing (classType, priorityRequestPhase) in active requests
         current_counts = {}
-        for req in self.active_requests:
-            if req["requestIDHex"] not in self.removal_queue:  # Exclude removal queue
-                key = (req["classType"], req["priorityRequestPhase"])
-                current_counts[key] = current_counts.get(key, 0) + 1
+        for req in self.active_requests.values():
+            key = (req["classType"], req["priorityRequestPhase"])
+            current_counts[key] = current_counts.get(key, 0) + 1
 
+        # Build set of current request keys (triple of vehicleID, classType, phase)
+        current_req_keys = set()
         for request in requestor_info:
-            # Priority Request ID (hex string)
-            priority_request_id = self.find_next_available_id()  # Get first available ID
-
             # Convert vehicle ID
             vehicle_id_str = str(request["vehicleID"])
             vehicle_id_hex = self.vehicle_id_to_hex(vehicle_id_str)
-
             requested_signal_group = request.get("requestedSignalGroup", 0)
             priority_request_phase = f"{requested_signal_group:02x}"
-            
             vehicle_type = request.get("vehicleType", 0)
             # Use fixed class type for now
             class_type = "07"
             
+            # The triple uniquely identifies a request for comparison
+            current_req_keys.add((vehicle_id_str, class_type, priority_request_phase))
+            
+            '''
             # Check if the vehicle ID already exists in an active request
-            matching_request = None
-            for req in self.active_requests:
-                if req["requestIDHex"] not in self.removal_queue and req["vehicleIDStr"] == vehicle_id_str:
+            matching_request_id = None
+            for req_id, req in self.active_requests.items():
+                if req["vehicleIDStr"] == vehicle_id_str:
                     if req["classType"] == class_type and req["priorityRequestPhase"] == priority_request_phase:
-                        print(f"[Update Matching] for VehicleID={vehicle_id_str}, ClassType={class_type}, Phase={priority_request_phase}, "
-                            f"Matches with ID={req['requestIDHex']}, VehicleID={req['vehicleIDStr']}, ClassType={req['classType']}, Phase={req['priorityRequestPhase']}")
-                        matching_request = req  # Found a matching active request
+                        self.log(
+                            f"[Update Matching] for VehicleID={vehicle_id_str}, ClassType={class_type}, Phase={priority_request_phase}, "
+                            f"Matches with ID={req['requestIDHex']}, VehicleID={req['vehicleIDStr']}, ClassType={req['classType']}, Phase={req['priorityRequestPhase']}",
+                            tag="REQUEST"
+                        )
+                        matching_request_id = req_id
+                        break
                     else:
-                        print(f"[ERROR] Conflicting request for VehicleID={vehicle_id_str}: "
+                        self.log(
+                            f"[ERROR] Conflicting request for VehicleID={vehicle_id_str}: "
                             f"Existing request has ClassType={req['classType']}, Phase={req['priorityRequestPhase']}, "
-                            f"but new request has ClassType={class_type}, Phase={priority_request_phase}")
-                        continue  
-                        ETA = int(request.get("ETA", 0))
+                            f"but new request has ClassType={class_type}, Phase={priority_request_phase}",
+                            level="ERROR", tag="REQUEST"
+                        )
+                        continue
+            '''
+            
+            matching_request_id = None
+            for req_id, req in self.active_requests.items():
+                # 1. If VehicleID matches but ClassType does NOT, log conflict
+                if req["vehicleIDStr"] == vehicle_id_str and req["classType"] != class_type:
+                    self.log(
+                        f"[ERROR] Conflicting class type for VehicleID={vehicle_id_str}: "
+                        f"Existing ClassType={req['classType']}, New ClassType={class_type}",
+                        level="ERROR", tag="REQUEST"
+                    )
+                    continue
+                # 2. If VehicleID and ClassType BOTH match
+                if req["vehicleIDStr"] == vehicle_id_str and req["classType"] == class_type:
+                    if req["priorityRequestPhase"] == priority_request_phase:
+                        # Exact match: update as usual
+                        self.log(
+                            f"[Update Matching] for VehicleID={vehicle_id_str}, ClassType={class_type}, Phase={priority_request_phase}, "
+                            f"Matches with ID={req['requestIDHex']}, VehicleID={req['vehicleIDStr']}, "
+                            f"ClassType={req['classType']}, Phase={req['priorityRequestPhase']}",
+                            tag="REQUEST"
+                        )
+                        matching_request_id = req_id
+                        break
+                    elif req["priorityRequestPhase"] == "unknown":
+                        # Phase unknown: treat as match and update phase
+                        self.log(
+                            f"[Phase Unknown Match] for VehicleID={vehicle_id_str}, ClassType={class_type}, "
+                            f"controller had phase='unknown', updating to Phase={priority_request_phase}",
+                            tag="REQUEST"
+                        )
+                        req["priorityRequestPhase"] = priority_request_phase
+                        matching_request_id = req_id
+                        break
+                    # If phase does not match, no error, just continue to next
+
                         
             ETA = int(request.get("ETA", 0))
             ETD = int(ETA + request.get("ETA_Duration", 0))
@@ -240,12 +460,12 @@ class NewSolver:
             ETD = ETD
             ETD_hex = f"{ETD:04x}"
             
-            if matching_request:
+            if matching_request_id is not None:
                 # Use the same request ID and send an update instead of a new set command
+                matching_request = self.active_requests[matching_request_id]
                 priority_request_id = matching_request["requestIDHex"]
                 set_oid = update_oid  # Change OID to update process
-                class_level = matching_request["classLevel"]  # Keep the previous class level
-
+                class_level = matching_request["classLevel"]
                 # Update the existing request's values
                 matching_request["setOID"] = set_oid  # Change to update OID
                 matching_request["setValue"] = (
@@ -256,13 +476,13 @@ class NewSolver:
                 matching_request["currentETD"] = ETD
                 matching_request["status"] = "pending"
                 msg = f"[INFO] Updating existing request with ID={priority_request_id} for VehicleID={vehicle_id_str}"
-                console_logs.append(msg)
-                print(msg)
+                self.log(msg, tag="REQUEST")
 
             else:
                 set_oid = new_oid
                 # Assign a new request ID
-                priority_request_id = self.find_next_available_id()
+                priority_request_id = self.find_next_available_id()  # Get first available ID
+                self.used_ids.add(int(priority_request_id, 16))
 
                 # Dynamically count existing requests and assign class level
                 key = (class_type, priority_request_phase)
@@ -286,7 +506,7 @@ class NewSolver:
                     + ETD_hex
                 )
 
-                self.active_requests.append({
+                self.active_requests[request_id_dec] = {
                 "requestIDHex": priority_request_id,  
                 "requestIDDec": request_id_dec, 
                 "vehicleIDStr": vehicle_id_str, 
@@ -299,7 +519,25 @@ class NewSolver:
                 "classType": class_type,     
                 "classLevel": class_level,   
                 "priorityRequestPhase": priority_request_phase  
-                })
+                }
+                    
+        # Find requests present last time but NOT this time (need to be cancelled)
+        to_cancel = self.prev_req_ids - current_req_keys
+        for cancel_key in to_cancel:
+            vehicle_id_str, class_type, priority_request_phase = cancel_key
+            for req in self.active_requests.values():
+                if (req["vehicleIDStr"], req["classType"], req["priorityRequestPhase"]) == cancel_key:
+                    req["setOID"] = clear_oid
+                    req["status"] = "pending"
+                    req["setValue"] = (
+                        req["requestIDHex"] + self.vehicle_id_to_hex(req["vehicleIDStr"]) +
+                        req["classType"] + req["classLevel"] + req["priorityRequestPhase"]
+                    )
+                    self.log(f"[AUTO-CANCEL] Auto-clearing RequestID={req['requestIDHex']} for VehicleID={vehicle_id_str}, "
+                         f"ClassType={class_type}, Phase={priority_request_phase}", tag="REQUEST")
+                    break      
+        
+        self.prev_req_ids = current_req_keys  # Update for next cycle
 
     ###########################################################################
     # PART 2: SENDING THE SNMP SET COMMANDS
@@ -319,7 +557,7 @@ class NewSolver:
         else:
             log_data = []
             
-        for req in self.active_requests:
+        for req in self.active_requests.values():
             if req["status"] in ("pending"):
                 command = [
                     "snmpset",
@@ -341,6 +579,10 @@ class NewSolver:
                 else:
                     action_type = "New Request"
                 
+                # Send SNMP SET and log command
+                self.log(f"[{action_type}] SNMP SET command: {' '.join(command)}", tag="SNMP")
+                success = self.snmp_set_hex(req["setOID"], req["setValue"])
+                
                 # Log request detaicls
                 log_entry = {
                     "Timestamp": timestamp_utc,
@@ -356,23 +598,23 @@ class NewSolver:
                     "Action": action_type,
                     "Success": success
                 }
-                
                 log_data.append(log_entry)
                 
                 if success:
-                    print(
+                    self.log(
                         f"[{action_type}] SNMP SET sent for RequestID={req['requestIDHex']}, "
                         f"VehicleID={req['vehicleIDStr']}, "
                         f"VehicleClassType={req['classType']}, "
                         f"VehicleClassLevel={req['classLevel']}, "
                         f"PriorityRequestPhase={req['priorityRequestPhase']}, "
-                        f"ETA={req['currentETA']}, "
-                        f"ETD={req['currentETD']}"
+                        f"ETA={req['currentETA']}, ETD={req['currentETD']}",
+                        tag="SNMP"
                     )
                     req["status"] = "active"
                 else:
-                    print(f"SNMP SET failed for RequestID={req['requestIDHex']}")
+                    self.log(f"SNMP SET failed for RequestID={req['requestIDHex']}", level="ERROR", tag="SNMP")
                     req["status"] = "failed"
+                    
         # Save updated log
         with log_path.open("w", encoding="utf-8") as f:
             json.dump(log_data, f, indent=4)
@@ -400,7 +642,7 @@ class NewSolver:
             )
             return True
         except subprocess.CalledProcessError as e:
-            print("SNMP SET Error:\n", e.stderr)
+            self.log(f"SNMP SET Error: {e.stderr.strip()}", level="ERROR", tag="SNMP")
             return False
 
     ###########################################################################
@@ -413,12 +655,11 @@ class NewSolver:
         - Processes new requests immediately
         - Monitors all active requests (old and new) together
         """
-        print("=== NewSolver is now actively listening for requests and monitoring ===")
-
-        self.removal_queue = {}  # Store completed requests to be removed after 60s
+        self.log("=== NewSolver is now actively listening for requests and monitoring ===", tag="MONITOR")
 
         while True:
             console_logs = []
+            # === 1. Handle new incoming UDP priority requests ===
             # === Check for new input every second ===
             self.socket.settimeout(self.poll_interval)  # Set 1-second timeout to avoid blocking
             try:
@@ -449,152 +690,54 @@ class NewSolver:
 
                 input_data = json.loads(data.decode())
 
-                msg = "=== Received New Priority Request ==="
-                console_logs.append(msg)
-                print("\n",msg)
+                self.log("=== Received New Priority Request ===", tag="MONITOR")
 
-                self.generate_snmp_requests(input_data)  # Process new request
+                self.generate_snmp_requests(input_data)
                 self.send_all_snmp_sets()
 
             except socket.timeout:
                 pass  # No new input, continue monitoring existing requests
-
-            # === Monitor all active requests ===   
+            
+            # === 2. Re-sync active requests with the controller ===
             msg = "=== Monitoring Active Requests ==="
             console_logs.append(msg)
-            print("\n",msg)
-            
+            print("\n", msg)
+
             # Print the epoch time before showing the requests
+            self.log("=== Monitoring Active Requests ===", tag="MONITOR")
             epoch_time = int(time.time())
-            console_logs.append(f"Epoch Time: {epoch_time}")
-            print(f"Epoch Time: {epoch_time}")
+            self.log(f"Epoch Time: {epoch_time}", tag="MONITOR")
 
-            incomplete = [r for r in self.active_requests if r["status"] not in (
-                "closedCompleted", "idleNotValid", "closedCanceled", "closedTimeToLiveError",
-                "closedTimerError", "closedStrategyError", "closedFlash", "reserviceError"
-            )]
+            controller_active, controller_active_ids = self.scan_controller_active_requests()
+            # Only update statusOID and status for matching requests in self.active_requests.
+            for req_id, controller_info in controller_active.items():
+                if req_id in self.active_requests:
+                    self.active_requests[req_id]["statusOID"] = controller_info["statusOID"]
+                    self.active_requests[req_id]["status"] = controller_info["status"]
+                else:
+                    # If a request is in controller but not locally, add it (rare, but possible after reboot/desync)
+                    self.active_requests[req_id] = controller_info
 
-            if not incomplete and not self.removal_queue:
-                msg = "All requests have reached terminal states. Monitoring continues..."
-                console_logs.append(msg)
-                print(msg)
-                
-            # Poll each incomplete request
-            for req in incomplete:
-                status_response = self.snmp_get(req["statusOID"])
-                status_code = self.extract_status_code(status_response) if status_response else None
+            # Remove requests that no longer exist in the controller
+            for req_id in list(self.active_requests.keys()):
+                if req_id not in controller_active_ids:
+                    del self.active_requests[req_id]
+            
+            # Optionally update self.used_ids as well (add any not already present)
+            for req_id in controller_active_ids:
+                self.used_ids.add(req_id)
 
-                if status_code is not None:
-                    status_name = REQUEST_STATUS_CODES.get(status_code, f"Unknown({status_code})")
-                    req["status"] = status_name
-
-                    if status_code in (1, 8, 9, 10, 11, 12, 13, 15):  # Terminal states
-                        msg = f"Request {req['requestIDHex']} => {status_name}. Marking for removal in 60s."
-                        console_logs.append(msg)
-                        print(msg)
-                        self.removal_queue[req["requestIDHex"]] = time.time() + 60
-
-            # Remove completed requests after 60 seconds
-            current_time = time.time()
-            for request_id_hex in list(self.removal_queue.keys()):
-                if current_time >= self.removal_queue[request_id_hex]:
-                    self.active_requests = [r for r in self.active_requests if r["requestIDHex"] != request_id_hex]
-                    msg = f"Request {request_id_hex} fully removed. ID now available."
-                    console_logs.append(msg)
-                    print(msg)
-                    del self.removal_queue[request_id_hex]
-
-            # Print and log active requests
+            # === 3. Print incomplete requests ===
             self.print_incomplete_requests()
-            self.append_to_monitoring_log(console_logs)
-
-    def append_to_monitoring_log(self, console_logs):
-        timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-        epoch_time = int(time.time())
-        monitor_snapshot = {
-            "EpochTime": epoch_time,
-            "Timestamp": timestamp,
-            "ConsoleOutput": console_logs
-        }
-
-        if self.monitoring_log_path.exists():
-            with self.monitoring_log_path.open("r", encoding="utf-8") as f:
-                try:
-                    monitor_log = json.load(f)
-                except json.JSONDecodeError:
-                    monitor_log = []
-        else:
-            monitor_log = []
-
-        monitor_log.append(monitor_snapshot)
-        with self.monitoring_log_path.open("w", encoding="utf-8") as f:
-            json.dump(monitor_log, f, indent=4)
-    
-    def snmp_get(self, oid: str) -> str:
-        """Execute snmpget and return the stdout. Return None on error."""
-        command = [
-            "snmpget",
-            "-v1",
-            "-c", self.snmp_community,
-            self.snmp_target,
-            oid
-        ]
-
-        try:
-            result = subprocess.run(
-                command,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            print("SNMP GET Error:\n", e.stderr)
-            return None
-
-    def extract_status_code(self, snmp_response: str):
-        """
-        Parse the net-snmp response to extract the integer after 'INTEGER:'.
-        Example:
-          SNMPv2-SMI::iso.3.6.1.xxxx = INTEGER: 4
-          => 4
-        Returns None if we can't parse an integer.
-        """
-        marker = "INTEGER:"
-        idx = snmp_response.find(marker)
-        if idx == -1:
-            return None
-
-        after = snmp_response[idx + len(marker):].strip()
-        parts = after.split()
-        if not parts:
-            return None
-
-        try:
-            return int(parts[0])
-        except ValueError:
-            return None
 
     def print_incomplete_requests(self):
-        """Print out the status of all incomplete requests each time step."""
-        # The incomplete requests are those still not in terminal states
-        incomplete = [r for r in self.active_requests
-                       if r["status"] not in ("closedCompleted", "idleNotValid", "closedCanceled",
-                                              "closedTimeToLiveError", "closedTimerError",
-                                              "closedStrategyError", "closedFlash",
-                                              "reserviceError")]
-        console_logs = []
-        
-        # Print active requests
-        if not incomplete:
+        """Print and log the status of all incomplete requests each time step."""
+        if not self.active_requests:
             msg = "No incomplete requests at this moment."
-            console_logs.append(msg)
-            print(msg)
+            self.log(msg, tag="REQUEST")
         else:
-            console_logs.append("--- Incomplete Requests ---")
-            print("\n--- Incomplete Requests ---")
-            for req in incomplete:
+            self.log("--- Incomplete Requests ---", tag="REQUEST")
+            for req in self.active_requests.values():
                 line = (
                     f"RequestID={req['requestIDHex']}, "
                     f"VehicleID={req['vehicleIDStr']}, "
@@ -603,28 +746,36 @@ class NewSolver:
                     f"PriorityRequestPhase={req['priorityRequestPhase']}, "
                     f"Status={req['status']}"
                 )
-                console_logs.append(line)
-                print(line)
-            console_logs.append("---------------------------")
-            print("---------------------------\n")
-
-        # Log snapshot
-        self.append_to_monitoring_log(console_logs)
+                self.log(line, tag="REQUEST")
+            self.log("---------------------------", tag="REQUEST")
 
 if __name__ == "__main__":
     # Load configuration file
     config_file_path = "/nojournal/bin/mmitss-phase3-master-config.json"
-    with open(config_file_path, 'r') as configFile:
-        config = json.load(configFile)
+    try:
+        with open(config_file_path, 'r') as configFile:
+            config = json.load(configFile)
+    except Exception as e:
+        # Fails before app exists, so log to a basic file or print and exit
+        with open("/nojournal/bin/log-1211/monitoring_log_startup.json", "a") as f:
+            import datetime, time
+            f.write(json.dumps({
+                "Timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "EpochTime": int(time.time()),
+                "Level": "ERROR",
+                "Tag": "STARTUP",
+                "Message": f"[ERROR] Failed to load config file: {e}"
+            }) + "\n")
+        print(f"[ERROR] Failed to load config file: {e}")
+        exit(1)
 
-    # Attempt to extract values
+    # Attempt to extract values and start app
     try:
         host_ip = config["HostIp"]
         port = config["PortNumber"]["PrioritySolver"]
         controller_ip = config["SignalController"]["IpAddress"]
         ntcip_port = config["SignalController"]["NtcipPort"]
         snmp_community = config["SignalController"]["SNMPCommunity"]
-
         snmp_target = f"{controller_ip}:{ntcip_port}"
 
         app = NewSolver(
@@ -637,4 +788,18 @@ if __name__ == "__main__":
         app.run()
 
     except KeyError as e:
+        # Log startup errors using app.log() if possible
+        try:
+            app.log(f"[ERROR] Missing key in configuration: {e}", level="ERROR", tag="STARTUP")
+        except Exception:
+            # fallback if app is not defined due to earlier crash
+            with open("/nojournal/bin/log-1211/monitoring_log_startup.json", "a") as f:
+                import datetime, time
+                f.write(json.dumps({
+                    "Timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+                    "EpochTime": int(time.time()),
+                    "Level": "ERROR",
+                    "Tag": "STARTUP",
+                    "Message": f"[ERROR] Missing key in configuration: {e}"
+                }) + "\n")
         print(f"[ERROR] Missing key in configuration: {e}")
