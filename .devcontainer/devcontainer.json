@@ -5,7 +5,7 @@
         "context": ".."
     },
     "mounts": [
-        "source=${env:HOME}/RA/MMITSS_dev/nojournal,target=/nojournal,type=bind"
+        "source=${env:HOME}/mmitss-1211/Configuration-update-March26/nojournal,target=/nojournal,type=bind"
     ],
     "runArgs": [
     "--network=host"

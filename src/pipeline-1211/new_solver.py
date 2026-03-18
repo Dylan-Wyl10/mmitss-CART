@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Version: v12
+# Version: v13
 import json
 import time
 import subprocess
@@ -37,14 +37,15 @@ TERMINAL_STATUS_NAMES = (
 )
 
 class NewSolver:
-    def __init__(self, host_ip, port, output_dir, snmp_target, snmp_community):
+    def __init__(self, host_ip, port, output_dir, snmp_target, snmp_community, vehicle_class_config=None):
         self.host_ip = host_ip
         self.port = port
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.snmp_target = snmp_target
-        self.snmp_community = snmp_community        
+        self.snmp_community = snmp_community      
+        self.vehicle_class_config = vehicle_class_config  
         
         # Clear previous SNMP log at startup
         timestamp = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
@@ -64,6 +65,11 @@ class NewSolver:
         
         self.monitoring_console_logs = []
         self.monitoring_log_lock = threading.Lock()
+
+        if self.vehicle_class_config:
+            self.log(f"VehicleClassConfig loaded: {list(self.vehicle_class_config.keys())}", tag="CONFIG")
+        else:
+            self.log("VehicleClassConfig not found. Using legacy class type / ETA duration behavior.", tag="CONFIG")
         
         # Set up UDP socket
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -344,6 +350,42 @@ class NewSolver:
         self.used_ids.clear()
         return "01"
 
+    def resolve_vehicle_class_config(self, vehicle_type, incoming_eta_duration):
+        """
+        Resolve class type and ETA duration from config using incoming numeric vehicleType.
+        Fallback behavior:
+        - If VehicleClassConfig is missing: use legacy class type '07' and incoming ETA_Duration
+        - If vehicleType has no match: log error and use legacy behavior
+        Returns:
+            class_type_hex (str), eta_duration (int)
+        """
+        legacy_class_type = "07"
+        legacy_eta_duration = int(incoming_eta_duration)
+
+        if not self.vehicle_class_config:
+            return legacy_class_type, legacy_eta_duration
+
+        for vehicle_name, cfg in self.vehicle_class_config.items():
+            if cfg.get("VehicleType") == vehicle_type:
+                class_type_int = int(cfg.get("ClassType", 7))
+                eta_duration = int(cfg.get("ETADuration", legacy_eta_duration))
+                class_type_hex = f"{class_type_int:02x}"
+
+                self.log(
+                    f"[VehicleClassConfig] vehicleType={vehicle_type} matched {vehicle_name}: "
+                    f"ClassType={class_type_hex}, ETADuration={eta_duration}",
+                    tag="CONFIG"
+                )
+                return class_type_hex, eta_duration
+
+        self.log(
+            f"[VehicleClassConfig] No matching config for vehicleType={vehicle_type}. "
+            f"Falling back to legacy behavior: ClassType=07, ETADuration={legacy_eta_duration}",
+            level="ERROR",
+            tag="CONFIG"
+        )
+        return legacy_class_type, legacy_eta_duration
+
     def generate_snmp_requests(self, data: dict):
         """
         1) Process the input data
@@ -390,8 +432,11 @@ class NewSolver:
             requested_signal_group = request.get("requestedSignalGroup", 0)
             priority_request_phase = f"{requested_signal_group:02x}"
             vehicle_type = request.get("vehicleType", 0)
-            # Use fixed class type for now
-            class_type = "07"
+            incoming_eta_duration = request.get("ETA_Duration", 0)
+            class_type, resolved_eta_duration = self.resolve_vehicle_class_config(
+                vehicle_type,
+                incoming_eta_duration
+            )
             
             # The triple uniquely identifies a request for comparison
             current_req_keys.add((vehicle_id_str, class_type, priority_request_phase))
@@ -455,10 +500,15 @@ class NewSolver:
 
                         
             ETA = int(request.get("ETA", 0))
-            ETD = int(ETA + request.get("ETA_Duration", 0))
+            ETD = int(ETA + resolved_eta_duration)
             ETA_hex = f"{ETA:04x}"
-            ETD = ETD
             ETD_hex = f"{ETD:04x}"
+            self.log(
+                f"[Resolved Request] VehicleID={vehicle_id_str}, vehicleType={vehicle_type}, "
+                f"ClassType={class_type}, ETA={ETA}, ETD={ETD}, "
+                f"UsedDuration={resolved_eta_duration}",
+                tag="REQUEST"
+            )
             
             if matching_request_id is not None:
                 # Use the same request ID and send an update instead of a new set command
@@ -568,7 +618,6 @@ class NewSolver:
                     "x",  # indicate hex type
                     req["setValue"]
                 ]
-                success = self.snmp_set_hex(req["setOID"], req["setValue"])
                 timestamp_utc = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
                 
                 # Determine action type
@@ -777,13 +826,15 @@ if __name__ == "__main__":
         ntcip_port = config["SignalController"]["NtcipPort"]
         snmp_community = config["SignalController"]["SNMPCommunity"]
         snmp_target = f"{controller_ip}:{ntcip_port}"
+        vehicle_class_config = config.get("VehicleClassConfig", None)
 
         app = NewSolver(
             host_ip=host_ip,
             port=port,
             output_dir="/nojournal/bin/log-1211",
             snmp_target=snmp_target,
-            snmp_community=snmp_community
+            snmp_community=snmp_community,
+            vehicle_class_config=vehicle_class_config
         )
         app.run()
 

@@ -1,5 +1,5 @@
 # Use your existing image as the base
-FROM cartlabpurdue/mmitss-mrp-x86:AA1.1
+FROM cartlabpurdue/mmitss-mrp-x86-1211:AA1.3
 
 # Switch to root user (if needed) to install packages
 USER root
@@ -27,4 +27,3 @@ WORKDIR /mmitss
 
 # Copy the compiled executable into the image
 COPY src/pipeline-1211/bin/M_Solver1211 /mmitss/M_Solver1211
-COPY src/mrp/priority-request-server/M_PriorityRequestServer /mmitss/M_PriorityRequestServer
