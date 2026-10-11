@@ -76,9 +76,11 @@ private:
     bool consoleOutput{false};
     bool lightSirenStatus{false};
     bool busStopPassedStatus{false};
+    bool qLineCorrectionEnabled{false}; //This variable will be true only if all the QLineSpecifics settings in the config file are valid
     string mapFileDirectory{};
     string mapFileName{};
     string logFileName{};
+    string qLineOBULeading{}; //Travel direction (North or South) in which the OBU-equipped end of the vehicle leads
     int temporaryVehicleID{};
     int vehicleLaneID{};
     int vehicleAprroachID{};
@@ -104,7 +106,9 @@ private:
     double busStopHeading{};
     double mapReferenceLattitude{};
     double mapReferenceLongitue{};
+    double qLineLengthMeter{}; //Vehicle length which will be subtracted from the distance to the stop-bar if the OBU-equipped end trails
 
+    string readQLineSpecifics(const Json::Value &jsonObject);
 
 public:
     PriorityRequestGenerator();
@@ -128,7 +132,7 @@ public:
     void setLaneID(int laneId);
     void setApproachID(int approachID);
     void setSignalGroup(int phaseNo);
-    void setETA(double distance2go, double vehicle_Speed);
+    void setETA(double distance2go, double vehicle_Speed, double vehicle_Heading);
     void setVehicleIntersectionStatus(int vehIntersectionStatus);
     void setVehicleType();
     void setSimulationVehicleType(string vehType); //For PRGServer

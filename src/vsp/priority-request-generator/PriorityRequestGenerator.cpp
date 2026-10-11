@@ -690,11 +690,19 @@ void PriorityRequestGenerator::setSignalGroup(int phaseNo)
 
 /*
 	-calculation for ETA. Units will be second
+	- If QLine ETA correction is enabled, travel direction is obtained from the current heading. Heading from 60 (inclusive) to 240 (exclusive) degree is South. Otherwise, it is North.
+	- If the OBU-equipped end trails, the vehicle length is subtracted from the distance to the stop-bar. The distance will not be less than zero.
 */
-void PriorityRequestGenerator::setETA(double distance2go, double vehicle_Speed)
+void PriorityRequestGenerator::setETA(double distance2go, double vehicle_Speed, double vehicle_Heading)
 {
+	double distanceForETA = distance2go / DISTANCEUNITCONVERSION; //distance2go is cm. DISTANCEUNITCONVERSION is used converst distance2go into meter
+	string vehicleTravelDirection = (vehicle_Heading >= 60.0 && vehicle_Heading < 240.0) ? "South" : "North";
+
+	if (qLineCorrectionEnabled && vehicleTravelDirection != qLineOBULeading)
+		distanceForETA = std::max(0.0, distanceForETA - qLineLengthMeter);
+
 	if (vehicle_Speed >= minimumVehicleSpeed)
-		vehicleETA = static_cast<double>((distance2go / DISTANCEUNITCONVERSION) / vehicle_Speed); //distance2go is cm. DISTANCEUNITCONVERSION is used converst distance2go into meter
+		vehicleETA = static_cast<double>(distanceForETA / vehicle_Speed);
 
 	else
 		vehicleETA = minimumETA + vehicleStartUpLossTime;
@@ -824,7 +832,7 @@ void PriorityRequestGenerator::getVehicleInformationFromMAP(MapManager mapManage
 				setSignalGroup(plocAwareLib->getControlPhaseByIds(static_cast<uint16_t>(regionalID), static_cast<uint16_t>(intersectionID), static_cast<uint8_t>(vehicleAprroachID), static_cast<uint8_t>(vehicleLaneID))); //Method for obtaining signal group based on vehicle laneID and approachID using MapEngine Library.
 				plocAwareLib->getPtDist2D(vehicleTracking_t_1, point2D_t_2);
 				vehicleDistanceFromStopBar = unsigned(point2D_t_1.distance2pt(point2D_t_2)); //unit of centimeters
-				setETA(vehicleDistanceFromStopBar, vehicleSpeed);
+				setETA(vehicleDistanceFromStopBar, vehicleSpeed, vehicle_Heading);
 				setVehicleID(basicVehicle); //Vehicle change its ID on a regular basis. Need to check the vehicle id.
 			}
 			//If vehicle is not on Map, clear the active map related information
@@ -852,7 +860,7 @@ void PriorityRequestGenerator::getVehicleInformationFromMAP(MapManager mapManage
 			setSignalGroup(plocAwareLib->getControlPhaseByIds(static_cast<uint16_t>(regionalID), static_cast<uint16_t>(intersectionID), static_cast<uint8_t>(vehicleAprroachID), static_cast<uint8_t>(vehicleLaneID))); //Method for obtaining signal group based on vehicle laneID and approachID using MapEngine Library.
 			plocAwareLib->getPtDist2D(vehicleTracking_t_1, point2D_t_2);
 			vehicleDistanceFromStopBar = unsigned(point2D_t_1.distance2pt(point2D_t_2)); //unit of centimeters
-			setETA(vehicleDistanceFromStopBar, vehicleSpeed);
+			setETA(vehicleDistanceFromStopBar, vehicleSpeed, vehicle_Heading);
 			setVehicleID(basicVehicle); //Vehicle change its ID on a regular basis. Need to check the vehicle id.
 			counter_VehicleInMap++;
 		}
@@ -1220,6 +1228,7 @@ void PriorityRequestGenerator::readConfigFile()
 	Json::CharReaderBuilder builder;
 	Json::CharReader *reader = builder.newCharReader();
 	string errors{};
+	string qLineSpecificsMessage{};
 
 	bool parsingSuccessful = reader->parse(configJsonString.c_str(), configJsonString.c_str() + configJsonString.size(), &jsonObject, &errors);
 	delete reader;
@@ -1229,6 +1238,7 @@ void PriorityRequestGenerator::readConfigFile()
 		requestTimedOutValue = (jsonObject["SRMTimedOutTime"]).asDouble() - SRM_TIME_GAP_VALUE;
 		logging = jsonObject["Logging"].asBool();
 		consoleOutput = jsonObject["ConsoleOutput"].asBool();
+		qLineSpecificsMessage = readQLineSpecifics(jsonObject);
 	}
 
 	//Create Log File, if requires
@@ -1246,6 +1256,49 @@ void PriorityRequestGenerator::readConfigFile()
 		logFile << "[" << fixed << showpoint << setprecision(4) << timeStamp << "] Open PRG logfile" << endl;
 		logFile.close();
 	}
+
+	//Report the QLineSpecifics status, if there is any message. The message is always written to stderr.
+	if (!qLineSpecificsMessage.empty())
+	{
+		std::cerr << "\n[" << fixed << showpoint << setprecision(4) << timeStamp << "] ";
+		std::cerr << qLineSpecificsMessage << endl;
+		loggingData(qLineSpecificsMessage);
+	}
+}
+
+/*
+	- Method to read the optional QLineSpecifics settings from the config file
+	- QLine ETA correction will be enabled only if QLineMode is true, OBULeading is North or South, and LengthMeter is a positive number. Otherwise, it will be disabled.
+	- Type of each setting is checked before reading the value, since reading a value with a wrong type can throw an exception.
+	- If QLineSpecifics is missing or QLineMode is false, the method returns an empty string.
+*/
+string PriorityRequestGenerator::readQLineSpecifics(const Json::Value &jsonObject)
+{
+	qLineCorrectionEnabled = false;
+
+	if (!jsonObject.isMember("QLineSpecifics"))
+		return "";
+
+	const Json::Value &qLineSpecifics = jsonObject["QLineSpecifics"];
+
+	if (qLineSpecifics.isObject() && qLineSpecifics["QLineMode"].isBool())
+	{
+		if (!qLineSpecifics["QLineMode"].asBool())
+			return "";
+
+		if (qLineSpecifics["OBULeading"].isString() && qLineSpecifics["LengthMeter"].isNumeric())
+		{
+			qLineOBULeading = qLineSpecifics["OBULeading"].asString();
+			qLineLengthMeter = qLineSpecifics["LengthMeter"].asDouble();
+			qLineCorrectionEnabled = (qLineOBULeading == "North" || qLineOBULeading == "South") && std::isfinite(qLineLengthMeter) && qLineLengthMeter > 0.0;
+		}
+	}
+
+	if (qLineCorrectionEnabled)
+		return "QLine ETA correction is enabled with OBULeading " + qLineOBULeading + " and LengthMeter " + std::to_string(qLineLengthMeter);
+
+	else
+		return "QLine ETA correction is disabled since QLineSpecifics in the config file is not valid";
 }
 
 /*
